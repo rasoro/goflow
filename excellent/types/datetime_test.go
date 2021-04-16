@@ -45,7 +45,7 @@ func TestXDateTime(t *testing.T) {
 	assert.Equal(t, `2018`, formatted)
 
 	formatted, err = d1.FormatCustom("YYYYYY", nil)
-	assert.EqualError(t, err, "invalid date format, invalid count of 'Y' format: 6")
+	assert.EqualError(t, err, "'YYYYYY' is not a valid format sequence")
 
 	d2 := d1.ReplaceTime(types.NewXTime(dates.NewTimeOfDay(16, 20, 30, 123456789)))
 	assert.Equal(t, 2018, d2.Native().Year())

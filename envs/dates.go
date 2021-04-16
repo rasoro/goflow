@@ -239,6 +239,10 @@ const (
 
 var ignoredFormattingRunes = map[rune]bool{' ': true, ':': true, '/': true, '.': true, 'T': true, '-': true, '_': true}
 
+func invalidSeqErr(r rune, count int) error {
+	return errors.Errorf("'%s' is not a valid format sequence", strings.Repeat(string(r), count))
+}
+
 // ToGoDateFormat converts the passed in format to a GoLang format string.
 //
 // If mode is DateOnlyFormatting or DateTimeFormatting, the following sequences are accepted:
@@ -247,8 +251,12 @@ var ignoredFormattingRunes = map[rune]bool{' ': true, ':': true, '/': true, '.':
 //  `YYYY`      - four digits of your 0000-9999
 //  `M`         - month 1-12
 //  `MM`        - month 01-12
-//  `D`         - day of month, 1-31
+//  `MMM`       - month Jan-Dec
+//  `MMMM`      - month January-December
+//  `D`         - day of month 1-31
 //  `DD`        - day of month, zero padded 0-31
+//  `EEE`       - day of week Mon-Sun
+//  `EEEE`      - day of week Monday-Sunday
 //
 // If mode is TimeOnlyFormatting or DateTimeFormatting, the following sequences are accepted:
 //
@@ -284,21 +292,21 @@ func ToGoDateFormat(format string, mode FormattingMode) (string, error) {
 		return count
 	}
 
-	for i := 0; i < len(runes); i++ {
+	var count = 0
+
+	for i := 0; i < len(runes); i += count {
 		r := runes[i]
-		count := repeatCount(runes, i, r)
+		count = repeatCount(runes, i, r)
 
 		if mode == DateOnlyFormatting || mode == DateTimeFormatting {
 			switch r {
 			case 'Y':
 				if count == 2 {
 					goFormat.WriteString("06")
-					i++
 				} else if count == 4 {
 					goFormat.WriteString("2006")
-					i += 3
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 'Y' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 
@@ -307,18 +315,32 @@ func ToGoDateFormat(format string, mode FormattingMode) (string, error) {
 					goFormat.WriteString("1")
 				} else if count == 2 {
 					goFormat.WriteString("01")
-					i++
+				} else if count == 3 {
+					goFormat.WriteString("Jan")
+				} else if count == 4 {
+					goFormat.WriteString("January")
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 'M' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 
 			case 'D':
 				if count == 1 {
 					goFormat.WriteString("2")
-				} else if count >= 2 {
+				} else if count == 2 {
 					goFormat.WriteString("02")
-					i++
+				} else {
+					return "", invalidSeqErr(r, count)
+				}
+				continue
+
+			case 'E':
+				if count == 3 {
+					goFormat.WriteString("Mon")
+				} else if count == 4 {
+					goFormat.WriteString("Monday")
+				} else {
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 			}
@@ -329,15 +351,12 @@ func ToGoDateFormat(format string, mode FormattingMode) (string, error) {
 			case 'f':
 				if count == 9 {
 					goFormat.WriteString("000000000")
-					i += 8
 				} else if count == 6 {
 					goFormat.WriteString("000000")
-					i += 5
 				} else if count == 3 {
 					goFormat.WriteString("000")
-					i += 2
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 'f' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 
@@ -346,16 +365,16 @@ func ToGoDateFormat(format string, mode FormattingMode) (string, error) {
 					goFormat.WriteString("3")
 				} else if count == 2 {
 					goFormat.WriteString("03")
-					i++
+				} else {
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 
 			case 't':
 				if count == 2 {
 					goFormat.WriteString("15")
-					i++
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 't' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 
@@ -364,9 +383,8 @@ func ToGoDateFormat(format string, mode FormattingMode) (string, error) {
 					goFormat.WriteString("4")
 				} else if count == 2 {
 					goFormat.WriteString("04")
-					i++
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 'm' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 
@@ -375,27 +393,24 @@ func ToGoDateFormat(format string, mode FormattingMode) (string, error) {
 					goFormat.WriteString("5")
 				} else if count == 2 {
 					goFormat.WriteString("05")
-					i++
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 's' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 
 			case 'a':
 				if count == 2 {
 					goFormat.WriteString("pm")
-					i++
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 'a' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 
 			case 'A':
 				if count == 2 {
 					goFormat.WriteString("PM")
-					i++
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 'A' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 			}
@@ -408,18 +423,17 @@ func ToGoDateFormat(format string, mode FormattingMode) (string, error) {
 					goFormat.WriteString("Z07:00")
 				} else if count == 3 {
 					goFormat.WriteString("-07:00")
-					i += 2
 				} else {
-					return "", errors.Errorf("invalid date format, invalid count of 'Z' format: %d", count)
+					return "", invalidSeqErr(r, count)
 				}
 				continue
 			}
 		}
 
 		if ignoredFormattingRunes[r] {
-			goFormat.WriteRune(r)
+			goFormat.WriteString(strings.Repeat(string(r), count))
 		} else {
-			return "", errors.Errorf("invalid date format, unknown format char: %c", r)
+			return "", errors.Errorf("unknown format char: %c", r)
 		}
 	}
 

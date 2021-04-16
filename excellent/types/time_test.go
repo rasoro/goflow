@@ -28,7 +28,7 @@ func TestXTime(t *testing.T) {
 	assert.Equal(t, `30`, formatted)
 
 	formatted, err = t1.FormatCustom(envs.TimeFormat("ssssss"))
-	assert.EqualError(t, err, "invalid date format, invalid count of 's' format: 6")
+	assert.EqualError(t, err, "'ssssss' is not a valid format sequence")
 
 	marshaled, err := jsonx.Marshal(t1)
 	assert.NoError(t, err)

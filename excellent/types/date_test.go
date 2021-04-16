@@ -28,7 +28,7 @@ func TestXDate(t *testing.T) {
 	assert.Equal(t, `2019`, formatted)
 
 	formatted, err = d1.FormatCustom(envs.DateFormat("YYYYYY"))
-	assert.EqualError(t, err, "invalid date format, invalid count of 'Y' format: 6")
+	assert.EqualError(t, err, "'YYYYYY' is not a valid format sequence")
 
 	asJSON, _ := types.ToXJSON(d1)
 	assert.Equal(t, types.NewXText(`"2019-02-20"`), asJSON)

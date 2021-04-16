@@ -207,51 +207,53 @@ func TestTimeFromString(t *testing.T) {
 	}
 }
 
-func TestDateFormat(t *testing.T) {
-	formatTests := []struct {
-		input    string
+func TestToGoFormat(t *testing.T) {
+	tests := []struct {
+		format   string
 		expected string
-		hasErr   bool
+		err      string
 	}{
-		{"MM-DD-YYYY", "01-02-2006", false},
-		{"M-D-YY", "1-2-06", false},
-		{"h:m", "3:4", false},
-		{"h:m:s aa", "3:4:5 pm", false},
-		{"h:m:s AA", "3:4:5 PM", false},
-		{"YYYY-MM-DDTtt:mm:ssZZZ", "2006-01-02T15:04:05-07:00", false},
-		{"YYYY-MM-DDTtt:mm:ssZZZ", "2006-01-02T15:04:05-07:00", false},
-		{"YYYY-MM-DDThh:mm:ss.fffZZZ", "2006-01-02T03:04:05.000-07:00", false},
-		{"YYYY-MM-DDThh:mm:ss.fffZ", "2006-01-02T03:04:05.000Z07:00", false},
-		{"YYYY-MM-DD", "2006-01-02", false},
+		{"MM-DD-YYYY", "01-02-2006", ""},
+		{"M-D-YY", "1-2-06", ""},
+		{"h:m", "3:4", ""},
+		{"h:m:s aa", "3:4:5 pm", ""},
+		{"h:m:s AA", "3:4:5 PM", ""},
+		{"YYYY-MM-DDTtt:mm:ssZZZ", "2006-01-02T15:04:05-07:00", ""},
+		{"YYYY-MM-DDTtt:mm:ssZZZ", "2006-01-02T15:04:05-07:00", ""},
+		{"YYYY-MM-DDThh:mm:ss.fffZZZ", "2006-01-02T03:04:05.000-07:00", ""},
+		{"YYYY-MM-DDThh:mm:ss.fffZ", "2006-01-02T03:04:05.000Z07:00", ""},
+		{"YY-M-D", "06-1-2", ""},
+		{"YYYY-MM-DD", "2006-01-02", ""},
+		{"YYYY-MMM-DD", "2006-Jan-02", ""},
+		{"YYYY-MMMM-DD", "2006-January-02", ""},
+		{"EEE", "Mon", ""},
+		{"EEEE", "Monday", ""},
+		{"//YY--MM::DD..", "//06--01::02..", ""},
 
-		{"tt:mm:ss.ffffff", "15:04:05.000000", false},
-		{"tt:mm:ss.fffffffff", "15:04:05.000000000", false},
+		{"tt:mm:ss.ffffff", "15:04:05.000000", ""},
+		{"tt:mm:ss.fffffffff", "15:04:05.000000000", ""},
 
-		{"tt:mm:ss.ffff", "", true},
-		{"t:mm:ss.ffff", "", true},
-		{"tt:mmm:ss.ffff", "", true},
-		{"YYYY-MMM-DD", "", true},
-		{"YYY-MM-DD", "", true},
-		{"tt:mm:sss", "", true},
-		{"tt:mm:ss a", "", true},
-		{"tt:mm:ss A", "", true},
-		{"tt:mm:ssZZZZ", "", true},
-
-		{"2006-01-02", "", true},
+		{"YYY-MM-DD", "", "'YYY' is not a valid format sequence"},
+		{"YYYY-MMMMM-DD", "", "'MMMMM' is not a valid format sequence"},
+		{"EE", "", "'EE' is not a valid format sequence"},
+		{"tt:mm:ss.ffff", "", "'ffff' is not a valid format sequence"},
+		{"t:mm:ss.ffff", "", "'t' is not a valid format sequence"},
+		{"tt:mmm:ss.ffff", "", "'mmm' is not a valid format sequence"},
+		{"tt:mm:sss", "", "'sss' is not a valid format sequence"},
+		{"tt:mm:ss a", "", "'a' is not a valid format sequence"},
+		{"tt:mm:ss A", "", "'A' is not a valid format sequence"},
+		{"tt:mm:ssZZZZ", "", "'ZZZZ' is not a valid format sequence"},
+		{"2006-01-02", "", "unknown format char: 2"},
 	}
 
-	for _, test := range formatTests {
-		actual, err := envs.ToGoDateFormat(test.input, envs.DateTimeFormatting)
-		if actual != test.expected {
-			t.Errorf("Date format invalid for '%s'  Expected: '%s' Got: '%s'", test.input, test.expected, actual)
-		}
-
-		if err != nil && !test.hasErr {
-			t.Errorf("Date format received error for '%s': %s", test.input, err)
-		}
-
-		if err == nil && test.hasErr {
-			t.Errorf("Date format expected error for '%s'", test.input)
+	for _, tc := range tests {
+		actual, err := envs.ToGoDateFormat(tc.format, envs.DateTimeFormatting)
+		if tc.err == "" {
+			assert.NoError(t, err, "unexpected error for format %s", tc.format)
+			assert.Equal(t, tc.expected, actual, "go format mismatch for format %s", tc.format)
+		} else {
+			assert.EqualError(t, err, tc.err, "error mismatch for format %s", tc.format)
+			assert.Equal(t, actual, "")
 		}
 	}
 }
