@@ -25,13 +25,11 @@ func init() {
 }
 
 func validateDateFormat(fl validator.FieldLevel) bool {
-	_, err := ToGoDateFormat(fl.Field().String(), DateOnlyFormatting)
-	return err == nil
+	return validateLayout(fl.Field().String(), false, DateOnlyFormatting) == nil
 }
 
 func validateTimeFormat(fl validator.FieldLevel) bool {
-	_, err := ToGoDateFormat(fl.Field().String(), TimeOnlyFormatting)
-	return err == nil
+	return validateLayout(fl.Field().String(), false, TimeOnlyFormatting) == nil
 }
 
 // patterns for date and time formats supported for human-entered data
@@ -227,23 +225,69 @@ func parseTime(str string) (bool, dates.TimeOfDay) {
 	return false, dates.ZeroTimeOfDay
 }
 
-// FormattingMode describe a mode of formatting dates, times, datetimes
-type FormattingMode int
+type seqType uint
 
-// supported formatting modes
 const (
-	DateOnlyFormatting FormattingMode = iota
-	TimeOnlyFormatting
-	DateTimeFormatting
+	dateType     seqType = 1
+	timeType     seqType = 2
+	dateTimeType seqType = 4
 )
 
-var ignoredFormattingRunes = map[rune]bool{' ': true, ':': true, '/': true, '.': true, 'T': true, '-': true, '_': true}
+type FormattingMode uint
 
-func invalidSeqErr(r rune, count int) error {
-	return errors.Errorf("'%s' is not a valid format sequence", strings.Repeat(string(r), count))
+const (
+	DateOnlyFormatting = FormattingMode(dateType)
+	TimeOnlyFormatting = FormattingMode(timeType)
+	DateTimeFormatting = FormattingMode(dateType | timeType | dateTimeType)
+)
+
+var ignoredFormattingRunes = map[rune]bool{' ': true, ':': true, '/': true, '.': true, ',': true, 'T': true, '-': true, '_': true}
+
+var layoutSequences = map[string]struct {
+	mapped    string
+	type_     seqType
+	parseable bool
+}{
+	"YY":        {"06", dateType, true},
+	"YYYY":      {"2006", dateType, true},
+	"M":         {"1", dateType, true},
+	"MM":        {"01", dateType, true},
+	"MMM":       {"Jan", dateType, false},
+	"MMMM":      {"January", dateType, false},
+	"D":         {"2", dateType, true},
+	"DD":        {"02", dateType, true},
+	"EEE":       {"Mon", dateType, false},
+	"EEEE":      {"Monday", dateType, false},
+	"fffffffff": {"000000000", timeType, true},
+	"ffffff":    {"000000", timeType, true},
+	"fff":       {"000", timeType, true},
+	"h":         {"3", timeType, true},
+	"hh":        {"03", timeType, true},
+	"t":         {"15", timeType, true}, // handled as special case in formatting code
+	"tt":        {"15", timeType, true},
+	"m":         {"4", timeType, true},
+	"mm":        {"04", timeType, true},
+	"s":         {"5", timeType, true},
+	"ss":        {"05", timeType, true},
+	"aa":        {"pm", timeType, true},
+	"AA":        {"PM", timeType, true},
+	"Z":         {"Z07:00", dateTimeType, true},
+	"ZZZ":       {"-07:00", dateTimeType, true},
 }
 
-// ToGoDateFormat converts the passed in format to a GoLang format string.
+func FormatDateTime(t time.Time, layout string, locale Locale) (string, error) {
+	return formatInLocale(layout, t.Format, locale, DateTimeFormatting)
+}
+
+func FormatDate(d dates.Date, layout string, locale Locale) (string, error) {
+	return formatInLocale(layout, d.Format, locale, DateOnlyFormatting)
+}
+
+func FormatTime(t dates.TimeOfDay, layout string, locale Locale) (string, error) {
+	return formatInLocale(layout, t.Format, locale, TimeOnlyFormatting)
+}
+
+// formats a datetime (time.Time), date (dates.Date) or time (dates.TimeOfDay)
 //
 // If mode is DateOnlyFormatting or DateTimeFormatting, the following sequences are accepted:
 //
@@ -276,166 +320,96 @@ func invalidSeqErr(r rune, count int) error {
 //  `ZZZ`       - hour and minute offset from UTC
 //
 // ignored chars: ' ', ':', ',', 'T', '-', '_', '/'
-func ToGoDateFormat(format string, mode FormattingMode) (string, error) {
-	runes := []rune(format)
-	goFormat := bytes.Buffer{}
+func formatInLocale(layout string, goFormat func(f string) string, locale Locale, mode FormattingMode) (string, error) {
+	output := bytes.Buffer{}
 
-	repeatCount := func(runes []rune, offset int, test rune) int {
-		count := 0
-		for i := offset; i < len(runes); i++ {
-			if runes[i] == test {
-				count++
-			} else {
+	writeSeq := func(seq, mapped string) {
+		out := ""
+
+		switch mapped {
+		case "January", "Jan", "Monday", "Mon", "PM", "pm":
+			out = goFormat(mapped)
+			// TODO translate
+		case "15":
+			// go formatting has no way of specifying 24 hour without zero padding
+			// so if user specified a single char, trim off the zero-padding
+			out = goFormat("15")
+			if seq == "t" {
+				out = strings.TrimLeft(out, "0")
+			}
+		case "000000000", "000000", "000":
+			// go only formats these after a period
+			out = goFormat("." + mapped)[1:]
+		case "":
+			out = seq // a sequence of ignored chars
+		default:
+			out = goFormat(mapped)
+		}
+		output.WriteString(out)
+	}
+
+	if err := visitLayoutSequences(layout, mode, false, writeSeq); err != nil {
+		return "", err
+	}
+
+	return output.String(), nil
+}
+
+// parses a layout string to validate it
+func validateLayout(layout string, parseable bool, mode FormattingMode) error {
+	return visitLayoutSequences(layout, mode, parseable, nil)
+}
+
+func ConvertToGoFormat(layout string, parseable bool, mode FormattingMode) (string, error) {
+	output := bytes.Buffer{}
+
+	writeSeq := func(seq, mapped string) {
+		if mapped != "" {
+			output.WriteString(mapped)
+		} else {
+			output.WriteString(seq)
+		}
+	}
+
+	if err := visitLayoutSequences(layout, mode, false, writeSeq); err != nil {
+		return "", err
+	}
+
+	return output.String(), nil
+}
+
+// parses a layout string, invoking the given callback for every mappable sequence or sequence of ignored chars
+func visitLayoutSequences(layout string, mode FormattingMode, parseable bool, callback func(string, string)) error {
+	runes := []rune(layout)
+	var seqLen int
+
+	for i := 0; i < len(runes); i += seqLen {
+		r := runes[i]
+		ignored := ignoredFormattingRunes[r]
+
+		// peek to see how many repeated occurences of r there are
+		for seqLen = 1; (i + seqLen) < len(runes); seqLen++ {
+			rx := runes[i+seqLen]
+			if (ignored && !ignoredFormattingRunes[rx]) || rx != r {
 				break
 			}
 		}
-		return count
-	}
 
-	var count = 0
+		seq := string(runes[i : i+seqLen]) // e.g. "YYYY", "tt"
+		mapped := ""                       // e.g. "2006", "15"
 
-	for i := 0; i < len(runes); i += count {
-		r := runes[i]
-		count = repeatCount(runes, i, r)
-
-		if mode == DateOnlyFormatting || mode == DateTimeFormatting {
-			switch r {
-			case 'Y':
-				if count == 2 {
-					goFormat.WriteString("06")
-				} else if count == 4 {
-					goFormat.WriteString("2006")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 'M':
-				if count == 1 {
-					goFormat.WriteString("1")
-				} else if count == 2 {
-					goFormat.WriteString("01")
-				} else if count == 3 {
-					goFormat.WriteString("Jan")
-				} else if count == 4 {
-					goFormat.WriteString("January")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 'D':
-				if count == 1 {
-					goFormat.WriteString("2")
-				} else if count == 2 {
-					goFormat.WriteString("02")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 'E':
-				if count == 3 {
-					goFormat.WriteString("Mon")
-				} else if count == 4 {
-					goFormat.WriteString("Monday")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
+		if !ignored {
+			layoutSeq, exists := layoutSequences[seq]
+			if exists && FormattingMode(layoutSeq.type_)&mode != 0 && (!parseable || layoutSeq.parseable) {
+				mapped = layoutSeq.mapped
+			} else {
+				return errors.Errorf("'%s' is not a valid format sequence", seq)
 			}
 		}
 
-		if mode == TimeOnlyFormatting || mode == DateTimeFormatting {
-			switch r {
-			case 'f':
-				if count == 9 {
-					goFormat.WriteString("000000000")
-				} else if count == 6 {
-					goFormat.WriteString("000000")
-				} else if count == 3 {
-					goFormat.WriteString("000")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 'h':
-				if count == 1 {
-					goFormat.WriteString("3")
-				} else if count == 2 {
-					goFormat.WriteString("03")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 't':
-				if count == 2 {
-					goFormat.WriteString("15")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 'm':
-				if count == 1 {
-					goFormat.WriteString("4")
-				} else if count == 2 {
-					goFormat.WriteString("04")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 's':
-				if count == 1 {
-					goFormat.WriteString("5")
-				} else if count == 2 {
-					goFormat.WriteString("05")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 'a':
-				if count == 2 {
-					goFormat.WriteString("pm")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-
-			case 'A':
-				if count == 2 {
-					goFormat.WriteString("PM")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-			}
-		}
-
-		if mode == DateTimeFormatting {
-			switch r {
-			case 'Z':
-				if count == 1 {
-					goFormat.WriteString("Z07:00")
-				} else if count == 3 {
-					goFormat.WriteString("-07:00")
-				} else {
-					return "", invalidSeqErr(r, count)
-				}
-				continue
-			}
-		}
-
-		if ignoredFormattingRunes[r] {
-			goFormat.WriteString(strings.Repeat(string(r), count))
-		} else {
-			return "", errors.Errorf("unknown format char: %c", r)
+		if callback != nil {
+			callback(seq, mapped)
 		}
 	}
-
-	return goFormat.String(), nil
+	return nil
 }

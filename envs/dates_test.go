@@ -1,6 +1,7 @@
 package envs_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -207,52 +208,67 @@ func TestTimeFromString(t *testing.T) {
 	}
 }
 
-func TestToGoFormat(t *testing.T) {
+func TestFormatDatetime(t *testing.T) {
+	mst, err := time.LoadLocation("MST")
+	require.NoError(t, err)
+
+	d1 := time.Date(2006, 1, 2, 15, 4, 5, 123456789, mst)
+	d2 := time.Date(1998, 4, 18, 9, 45, 30, 123456789, time.UTC)
+	en_US := envs.NewLocale("eng", "US")
+	// es_EC = envs.NewLocale("spa", "EC")
+
 	tests := []struct {
-		format   string
+		value    time.Time
+		layout   string
+		locale   envs.Locale
 		expected string
 		err      string
 	}{
-		{"MM-DD-YYYY", "01-02-2006", ""},
-		{"M-D-YY", "1-2-06", ""},
-		{"h:m", "3:4", ""},
-		{"h:m:s aa", "3:4:5 pm", ""},
-		{"h:m:s AA", "3:4:5 PM", ""},
-		{"YYYY-MM-DDTtt:mm:ssZZZ", "2006-01-02T15:04:05-07:00", ""},
-		{"YYYY-MM-DDTtt:mm:ssZZZ", "2006-01-02T15:04:05-07:00", ""},
-		{"YYYY-MM-DDThh:mm:ss.fffZZZ", "2006-01-02T03:04:05.000-07:00", ""},
-		{"YYYY-MM-DDThh:mm:ss.fffZ", "2006-01-02T03:04:05.000Z07:00", ""},
-		{"YY-M-D", "06-1-2", ""},
-		{"YYYY-MM-DD", "2006-01-02", ""},
-		{"YYYY-MMM-DD", "2006-Jan-02", ""},
-		{"YYYY-MMMM-DD", "2006-January-02", ""},
-		{"EEE", "Mon", ""},
-		{"EEEE", "Monday", ""},
-		{"//YY--MM::DD..", "//06--01::02..", ""},
+		{d1, "MM-DD-YYYY", en_US, "01-02-2006", ""},
+		{d1, "M-D-YY", en_US, "1-2-06", ""},
+		{d1, "h:m", en_US, "3:4", ""},
+		{d1, "h:m:s aa", en_US, "3:4:5 pm", ""},
+		{d1, "h:m:s AA", en_US, "3:4:5 PM", ""},
+		{d1, "tt:mm:ss", en_US, "15:04:05", ""},
+		{d2, "tt:mm:ss", en_US, "09:45:30", ""},
+		{d2, "t:mm:ss", en_US, "9:45:30", ""},
+		{d1, "YYYY-MM-DDTtt:mm:ssZZZ", en_US, "2006-01-02T15:04:05-07:00", ""},
+		{d1, "YYYY-MM-DDTtt:mm:ssZZZ", en_US, "2006-01-02T15:04:05-07:00", ""},
+		{d1, "YYYY-MM-DDThh:mm:ss.fffZZZ", en_US, "2006-01-02T03:04:05.123-07:00", ""},
+		{d1, "YYYY-MM-DDThh:mm:ss.fffZ", en_US, "2006-01-02T03:04:05.123-07:00", ""},
+		{d1, "YY-M-D", en_US, "06-1-2", ""},
+		{d1, "YYYY-MM-DD", en_US, "2006-01-02", ""},
+		{d1, "YYYY-MMM-DD", en_US, "2006-Jan-02", ""},
+		{d1, "YYYY-MMMM-DD", en_US, "2006-January-02", ""},
+		{d1, "EEE", en_US, "Mon", ""},
+		{d1, "EEEE", en_US, "Monday", ""},
+		{d1, "//YY--MM::DD..", en_US, "//06--01::02..", ""},
 
-		{"tt:mm:ss.ffffff", "15:04:05.000000", ""},
-		{"tt:mm:ss.fffffffff", "15:04:05.000000000", ""},
+		{d1, "tt:mm:ss.fff", en_US, "15:04:05.123", ""},
+		{d1, "tt:mm:ss.ffffff", en_US, "15:04:05.123456", ""},
+		{d1, "tt:mm:ss.fffffffff", en_US, "15:04:05.123456789", ""},
 
-		{"YYY-MM-DD", "", "'YYY' is not a valid format sequence"},
-		{"YYYY-MMMMM-DD", "", "'MMMMM' is not a valid format sequence"},
-		{"EE", "", "'EE' is not a valid format sequence"},
-		{"tt:mm:ss.ffff", "", "'ffff' is not a valid format sequence"},
-		{"t:mm:ss.ffff", "", "'t' is not a valid format sequence"},
-		{"tt:mmm:ss.ffff", "", "'mmm' is not a valid format sequence"},
-		{"tt:mm:sss", "", "'sss' is not a valid format sequence"},
-		{"tt:mm:ss a", "", "'a' is not a valid format sequence"},
-		{"tt:mm:ss A", "", "'A' is not a valid format sequence"},
-		{"tt:mm:ssZZZZ", "", "'ZZZZ' is not a valid format sequence"},
-		{"2006-01-02", "", "unknown format char: 2"},
+		{d1, "YYY-MM-DD", en_US, "", "'YYY' is not a valid format sequence"},
+		{d1, "YYYY-MMMMM-DD", en_US, "", "'MMMMM' is not a valid format sequence"},
+		{d1, "EE", en_US, "", "'EE' is not a valid format sequence"},
+		{d1, "tt:mm:ss.ffff", en_US, "", "'ffff' is not a valid format sequence"},
+		{d1, "tt:mmm:ss.ffff", en_US, "", "'mmm' is not a valid format sequence"},
+		{d1, "tt:mm:sss", en_US, "", "'sss' is not a valid format sequence"},
+		{d1, "tt:mm:ss a", en_US, "", "'a' is not a valid format sequence"},
+		{d1, "tt:mm:ss A", en_US, "", "'A' is not a valid format sequence"},
+		{d1, "tt:mm:ssZZZZ", en_US, "", "'ZZZZ' is not a valid format sequence"},
+		{d1, "2006-01-02", en_US, "", "'2' is not a valid format sequence"},
 	}
 
 	for _, tc := range tests {
-		actual, err := envs.ToGoDateFormat(tc.format, envs.DateTimeFormatting)
+		desc := fmt.Sprintf("%s as '%s' in '%s'", tc.value.String(), tc.layout, tc.locale.ToISO639_2())
+
+		actual, err := envs.FormatDateTime(tc.value, tc.layout, tc.locale)
 		if tc.err == "" {
-			assert.NoError(t, err, "unexpected error for format %s", tc.format)
-			assert.Equal(t, tc.expected, actual, "go format mismatch for format %s", tc.format)
+			assert.NoError(t, err, "unexpected error for %s", desc)
+			assert.Equal(t, tc.expected, actual, "format mismatch for %s", desc)
 		} else {
-			assert.EqualError(t, err, tc.err, "error mismatch for format %s", tc.format)
+			assert.EqualError(t, err, tc.err, "error mismatch for %s", desc)
 			assert.Equal(t, actual, "")
 		}
 	}

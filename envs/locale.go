@@ -31,3 +31,5 @@ func (l Locale) ToISO639_2() string {
 	}
 	return code
 }
+
+var NilLocale = Locale{}

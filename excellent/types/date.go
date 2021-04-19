@@ -38,17 +38,13 @@ func (x XDate) Render() string { return x.Native().String() }
 
 // Format returns the pretty text representation
 func (x XDate) Format(env envs.Environment) string {
-	formatted, _ := x.FormatCustom(env.DateFormat())
+	formatted, _ := x.FormatCustom(string(env.DateFormat()), envs.NilLocale)
 	return formatted
 }
 
 // FormatCustom provides customised formatting
-func (x XDate) FormatCustom(format envs.DateFormat) (string, error) {
-	goFormat, err := envs.ToGoDateFormat(string(format), envs.DateOnlyFormatting)
-	if err != nil {
-		return "", err
-	}
-	return x.Native().Format(goFormat), nil
+func (x XDate) FormatCustom(layout string, locale envs.Locale) (string, error) {
+	return envs.FormatDate(x.Native(), layout, locale)
 }
 
 // MarshalJSON is called when a struct containing this type is marshaled

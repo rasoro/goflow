@@ -23,11 +23,11 @@ func TestXDate(t *testing.T) {
 	assert.True(t, d1.Truthy())
 	assert.Equal(t, `XDate(2019, 2, 20)`, d1.String())
 
-	formatted, err := d1.FormatCustom(envs.DateFormat("YYYY"))
+	formatted, err := d1.FormatCustom("YYYY", envs.NilLocale)
 	assert.NoError(t, err)
 	assert.Equal(t, `2019`, formatted)
 
-	formatted, err = d1.FormatCustom(envs.DateFormat("YYYYYY"))
+	formatted, err = d1.FormatCustom("YYYYYY", envs.NilLocale)
 	assert.EqualError(t, err, "'YYYYYY' is not a valid format sequence")
 
 	asJSON, _ := types.ToXJSON(d1)

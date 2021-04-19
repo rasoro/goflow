@@ -9,7 +9,7 @@ import (
 
 // file containing day and month translations, generated using https://github.com/nyaruka/go-locales
 //
-// ./localesdump --merge days=LC_TIME.day short_days=LC_TIME.abday months=LC_TIME.mon short_months=LC_TIME.abmon
+// ./localesdump --merge days=LC_TIME.day short_days=LC_TIME.abday months=LC_TIME.mon short_months=LC_TIME.abmon am_pm=LC_TIME.am_pm > dates.json
 //
 //go:embed i18n/i18n.json
 var i18nJSON []byte
@@ -19,6 +19,7 @@ type Translation struct {
 	ShortDays   []string `json:"short_days"`
 	Months      []string `json:"months"`
 	ShortMonths []string `json:"short_months"`
+	AmPm        []string `json:"am_pm"`
 }
 
 var translations map[string]*Translation

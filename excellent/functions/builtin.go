@@ -1160,16 +1160,11 @@ func RandBetween(env envs.Environment, min types.XNumber, max types.XNumber) typ
 // * `YY`        - last two digits of year 0-99
 // * `YYYY`      - four digits of year 0000-9999
 // * `M`         - month 1-12
-// * `MM`        - month 01-12
 // * `D`         - day of month, 1-31
-// * `DD`        - day of month, zero padded 0-31
 // * `h`         - hour of the day 1-12
-// * `hh`        - hour of the day 01-12
-// * `tt`        - twenty four hour of the day 01-23
+// * `t`         - twenty four hour of the day 1-23
 // * `m`         - minute 0-59
-// * `mm`        - minute 00-59
 // * `s`         - second 0-59
-// * `ss`        - second 00-59
 // * `fff`       - milliseconds
 // * `ffffff`    - microseconds
 // * `fffffffff` - nanoseconds
@@ -1206,7 +1201,7 @@ func ParseDateTime(env envs.Environment, args ...types.XValue) types.XValue {
 	}
 
 	// try to turn it to a go format
-	goFormat, err := envs.ToGoDateFormat(format.Native(), envs.DateTimeFormatting)
+	goFormat, err := envs.ConvertToGoFormat(format.Native(), true, envs.DateTimeFormatting)
 	if err != nil {
 		return types.NewXError(err)
 	}
@@ -1518,7 +1513,7 @@ func ParseTime(env envs.Environment, arg1 types.XValue, arg2 types.XValue) types
 	}
 
 	// try to turn it to a go format
-	goFormat, err := envs.ToGoDateFormat(format.Native(), envs.TimeOnlyFormatting)
+	goFormat, err := envs.ConvertToGoFormat(format.Native(), true, envs.TimeOnlyFormatting)
 	if err != nil {
 		return types.NewXError(err)
 	}
@@ -1674,7 +1669,7 @@ func FormatDate(env envs.Environment, args ...types.XValue) types.XValue {
 			return xerr
 		}
 
-		formatted, err := date.FormatCustom(envs.DateFormat(format.Native()))
+		formatted, err := date.FormatCustom(format.Native(), env.DefaultLocale())
 		if err != nil {
 			return types.NewXError(err)
 		}
@@ -1756,7 +1751,7 @@ func FormatDateTime(env envs.Environment, args ...types.XValue) types.XValue {
 		}
 	}
 
-	formatted, err := date.FormatCustom(format.Native(), location)
+	formatted, err := date.FormatCustom(format.Native(), location, env.DefaultLocale())
 	if err != nil {
 		return types.NewXError(err)
 	}
@@ -1801,7 +1796,7 @@ func FormatTime(env envs.Environment, args ...types.XValue) types.XValue {
 			return xerr
 		}
 
-		formatted, err := t.FormatCustom(envs.TimeFormat(format.Native()))
+		formatted, err := t.FormatCustom(format.Native(), env.DefaultLocale())
 		if err != nil {
 			return types.NewXError(err)
 		}

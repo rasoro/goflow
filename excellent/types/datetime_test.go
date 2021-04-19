@@ -40,11 +40,11 @@ func TestXDateTime(t *testing.T) {
 	d1 := types.NewXDateTime(time.Date(2018, 4, 9, 17, 1, 30, 0, la))
 	assert.Equal(t, `datetime`, d1.Describe())
 
-	formatted, err := d1.FormatCustom("YYYY", nil)
+	formatted, err := d1.FormatCustom("YYYY", nil, envs.NilLocale)
 	assert.NoError(t, err)
 	assert.Equal(t, `2018`, formatted)
 
-	formatted, err = d1.FormatCustom("YYYYYY", nil)
+	formatted, err = d1.FormatCustom("YYYYYY", nil, envs.NilLocale)
 	assert.EqualError(t, err, "'YYYYYY' is not a valid format sequence")
 
 	d2 := d1.ReplaceTime(types.NewXTime(dates.NewTimeOfDay(16, 20, 30, 123456789)))
