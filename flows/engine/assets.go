@@ -12,19 +12,20 @@ import (
 type sessionAssets struct {
 	source assets.Source
 
-	channels    *flows.ChannelAssets
-	classifiers *flows.ClassifierAssets
-	fields      *flows.FieldAssets
-	flows       flows.FlowAssets
-	globals     *flows.GlobalAssets
-	groups      *flows.GroupAssets
-	labels      *flows.LabelAssets
-	locations   *flows.LocationAssets
-	resthooks   *flows.ResthookAssets
-	templates   *flows.TemplateAssets
-	ticketers   *flows.TicketerAssets
-	topics      *flows.TopicAssets
-	users       *flows.UserAssets
+	channels         *flows.ChannelAssets
+	classifiers      *flows.ClassifierAssets
+	externalServices *flows.ExternalServiceAssets
+	fields           *flows.FieldAssets
+	flows            flows.FlowAssets
+	globals          *flows.GlobalAssets
+	groups           *flows.GroupAssets
+	labels           *flows.LabelAssets
+	locations        *flows.LocationAssets
+	resthooks        *flows.ResthookAssets
+	templates        *flows.TemplateAssets
+	ticketers        *flows.TicketerAssets
+	topics           *flows.TopicAssets
+	users            *flows.UserAssets
 }
 
 var _ flows.SessionAssets = (*sessionAssets)(nil)
@@ -36,6 +37,10 @@ func NewSessionAssets(env envs.Environment, source assets.Source, migrationConfi
 		return nil, err
 	}
 	classifiers, err := source.Classifiers()
+	if err != nil {
+		return nil, err
+	}
+	externalServices, err := source.ExternalServices()
 	if err != nil {
 		return nil, err
 	}
@@ -84,37 +89,39 @@ func NewSessionAssets(env envs.Environment, source assets.Source, migrationConfi
 	groupAssets, _ := flows.NewGroupAssets(env, fieldAssets, groups)
 
 	return &sessionAssets{
-		source:      source,
-		channels:    flows.NewChannelAssets(channels),
-		classifiers: flows.NewClassifierAssets(classifiers),
-		fields:      fieldAssets,
-		flows:       definition.NewFlowAssets(source, migrationConfig),
-		globals:     flows.NewGlobalAssets(globals),
-		groups:      groupAssets,
-		labels:      flows.NewLabelAssets(labels),
-		locations:   flows.NewLocationAssets(locations),
-		resthooks:   flows.NewResthookAssets(resthooks),
-		templates:   flows.NewTemplateAssets(templates),
-		ticketers:   flows.NewTicketerAssets(ticketers),
-		topics:      flows.NewTopicAssets(topics),
-		users:       flows.NewUserAssets(users),
+		source:           source,
+		channels:         flows.NewChannelAssets(channels),
+		classifiers:      flows.NewClassifierAssets(classifiers),
+		externalServices: flows.NewExternalServiceAssets(externalServices),
+		fields:           fieldAssets,
+		flows:            definition.NewFlowAssets(source, migrationConfig),
+		globals:          flows.NewGlobalAssets(globals),
+		groups:           groupAssets,
+		labels:           flows.NewLabelAssets(labels),
+		locations:        flows.NewLocationAssets(locations),
+		resthooks:        flows.NewResthookAssets(resthooks),
+		templates:        flows.NewTemplateAssets(templates),
+		ticketers:        flows.NewTicketerAssets(ticketers),
+		topics:           flows.NewTopicAssets(topics),
+		users:            flows.NewUserAssets(users),
 	}, nil
 }
 
-func (s *sessionAssets) Source() assets.Source                { return s.source }
-func (s *sessionAssets) Channels() *flows.ChannelAssets       { return s.channels }
-func (s *sessionAssets) Classifiers() *flows.ClassifierAssets { return s.classifiers }
-func (s *sessionAssets) Fields() *flows.FieldAssets           { return s.fields }
-func (s *sessionAssets) Flows() flows.FlowAssets              { return s.flows }
-func (s *sessionAssets) Globals() *flows.GlobalAssets         { return s.globals }
-func (s *sessionAssets) Groups() *flows.GroupAssets           { return s.groups }
-func (s *sessionAssets) Labels() *flows.LabelAssets           { return s.labels }
-func (s *sessionAssets) Locations() *flows.LocationAssets     { return s.locations }
-func (s *sessionAssets) Resthooks() *flows.ResthookAssets     { return s.resthooks }
-func (s *sessionAssets) Templates() *flows.TemplateAssets     { return s.templates }
-func (s *sessionAssets) Ticketers() *flows.TicketerAssets     { return s.ticketers }
-func (s *sessionAssets) Topics() *flows.TopicAssets           { return s.topics }
-func (s *sessionAssets) Users() *flows.UserAssets             { return s.users }
+func (s *sessionAssets) Source() assets.Source                          { return s.source }
+func (s *sessionAssets) Channels() *flows.ChannelAssets                 { return s.channels }
+func (s *sessionAssets) Classifiers() *flows.ClassifierAssets           { return s.classifiers }
+func (s *sessionAssets) ExternalServices() *flows.ExternalServiceAssets { return s.externalServices }
+func (s *sessionAssets) Fields() *flows.FieldAssets                     { return s.fields }
+func (s *sessionAssets) Flows() flows.FlowAssets                        { return s.flows }
+func (s *sessionAssets) Globals() *flows.GlobalAssets                   { return s.globals }
+func (s *sessionAssets) Groups() *flows.GroupAssets                     { return s.groups }
+func (s *sessionAssets) Labels() *flows.LabelAssets                     { return s.labels }
+func (s *sessionAssets) Locations() *flows.LocationAssets               { return s.locations }
+func (s *sessionAssets) Resthooks() *flows.ResthookAssets               { return s.resthooks }
+func (s *sessionAssets) Templates() *flows.TemplateAssets               { return s.templates }
+func (s *sessionAssets) Ticketers() *flows.TicketerAssets               { return s.ticketers }
+func (s *sessionAssets) Topics() *flows.TopicAssets                     { return s.topics }
+func (s *sessionAssets) Users() *flows.UserAssets                       { return s.users }
 
 func (s *sessionAssets) ResolveField(key string) assets.Field {
 	f := s.Fields().Get(key)

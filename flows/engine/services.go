@@ -21,12 +21,16 @@ type TicketServiceFactory func(flows.Session, *flows.Ticketer) (flows.TicketServ
 // AirtimeServiceFactory resolves a session to an airtime service
 type AirtimeServiceFactory func(flows.Session) (flows.AirtimeService, error)
 
+// ExternalServiceFactory resolves a session to an external service service
+type ExternalServiceFactory func(flows.Session, *flows.ExternalService) (flows.ExternalServiceService, error)
+
 type services struct {
-	email          EmailServiceFactory
-	webhook        WebhookServiceFactory
-	classification ClassificationServiceFactory
-	ticket         TicketServiceFactory
-	airtime        AirtimeServiceFactory
+	email           EmailServiceFactory
+	webhook         WebhookServiceFactory
+	classification  ClassificationServiceFactory
+	ticket          TicketServiceFactory
+	airtime         AirtimeServiceFactory
+	externalService ExternalServiceFactory
 }
 
 func newEmptyServices() *services {
@@ -45,6 +49,9 @@ func newEmptyServices() *services {
 		},
 		airtime: func(flows.Session) (flows.AirtimeService, error) {
 			return nil, errors.New("no airtime service factory configured")
+		},
+		externalService: func(flows.Session, *flows.ExternalService) (flows.ExternalServiceService, error) {
+			return nil, errors.New("no external service factory configured")
 		},
 	}
 }
@@ -67,4 +74,8 @@ func (s *services) Ticket(session flows.Session, ticketer *flows.Ticketer) (flow
 
 func (s *services) Airtime(session flows.Session) (flows.AirtimeService, error) {
 	return s.airtime(session)
+}
+
+func (s *services) ExternalService(session flows.Session, externalService *flows.ExternalService) (flows.ExternalServiceService, error) {
+	return s.externalService(session, externalService)
 }

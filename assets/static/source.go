@@ -15,19 +15,20 @@ import (
 // StaticSource is an asset source which loads assets from a static JSON file
 type StaticSource struct {
 	s struct {
-		Channels    []*Channel                `json:"channels" validate:"omitempty,dive"`
-		Classifiers []*Classifier             `json:"classifiers" validate:"omitempty,dive"`
-		Fields      []*Field                  `json:"fields" validate:"omitempty,dive"`
-		Flows       []*Flow                   `json:"flows" validate:"omitempty,dive"`
-		Globals     []*Global                 `json:"globals" validate:"omitempty,dive"`
-		Groups      []*Group                  `json:"groups" validate:"omitempty,dive"`
-		Labels      []*Label                  `json:"labels" validate:"omitempty,dive"`
-		Locations   []*envs.LocationHierarchy `json:"locations"`
-		Resthooks   []*Resthook               `json:"resthooks" validate:"omitempty,dive"`
-		Templates   []*Template               `json:"templates" validate:"omitempty,dive"`
-		Ticketers   []*Ticketer               `json:"ticketers" validate:"omitempty,dive"`
-		Topics      []*Topic                  `json:"topics" validate:"omitempty,dive"`
-		Users       []*User                   `json:"users" validate:"omitempty,dive"`
+		Channels         []*Channel                `json:"channels" validate:"omitempty,dive"`
+		Classifiers      []*Classifier             `json:"classifiers" validate:"omitempty,dive"`
+		ExternalServices []*ExternalService        `json:"externalServices" validate:"omitempty"`
+		Fields           []*Field                  `json:"fields" validate:"omitempty,dive"`
+		Flows            []*Flow                   `json:"flows" validate:"omitempty,dive"`
+		Globals          []*Global                 `json:"globals" validate:"omitempty,dive"`
+		Groups           []*Group                  `json:"groups" validate:"omitempty,dive"`
+		Labels           []*Label                  `json:"labels" validate:"omitempty,dive"`
+		Locations        []*envs.LocationHierarchy `json:"locations"`
+		Resthooks        []*Resthook               `json:"resthooks" validate:"omitempty,dive"`
+		Templates        []*Template               `json:"templates" validate:"omitempty,dive"`
+		Ticketers        []*Ticketer               `json:"ticketers" validate:"omitempty,dive"`
+		Topics           []*Topic                  `json:"topics" validate:"omitempty,dive"`
+		Users            []*User                   `json:"users" validate:"omitempty,dive"`
 	}
 }
 
@@ -70,6 +71,14 @@ func (s *StaticSource) Classifiers() ([]assets.Classifier, error) {
 	set := make([]assets.Classifier, len(s.s.Classifiers))
 	for i := range s.s.Classifiers {
 		set[i] = s.s.Classifiers[i]
+	}
+	return set, nil
+}
+
+func (s *StaticSource) ExternalServices() ([]assets.ExternalService, error) {
+	set := make([]assets.ExternalService, len(s.s.ExternalServices))
+	for i := range s.s.ExternalServices {
+		set[i] = s.s.ExternalServices[i]
 	}
 	return set, nil
 }

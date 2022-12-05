@@ -4,6 +4,7 @@ package assets
 type Source interface {
 	Channels() ([]Channel, error)
 	Classifiers() ([]Classifier, error)
+	ExternalServices() ([]ExternalService, error)
 	Fields() ([]Field, error)
 	Flow(FlowUUID) (Flow, error)
 	Globals() ([]Global, error)

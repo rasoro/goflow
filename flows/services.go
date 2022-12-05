@@ -19,6 +19,7 @@ type Services interface {
 	Classification(Session, *Classifier) (ClassificationService, error)
 	Ticket(Session, *Ticketer) (TicketService, error)
 	Airtime(Session) (AirtimeService, error)
+	ExternalService(Session, *ExternalService) (ExternalServiceService, error)
 }
 
 // EmailService provides email functionality to the engine
@@ -73,6 +74,13 @@ type Classification struct {
 	Entities map[string][]ExtractedEntity `json:"entities,omitempty"`
 }
 
+// ExternalServiceCall is the result of a external service call
+type ExternalServiceCall struct {
+	*httpx.Trace
+	ResponseJSON    []byte
+	ResponseCleaned bool
+}
+
 // ClassificationService provides NLU functionality to the engine
 type ClassificationService interface {
 	Classify(session Session, input string, logHTTP HTTPLogCallback) (*Classification, error)
@@ -82,6 +90,10 @@ type ClassificationService interface {
 type TicketService interface {
 	// Open tries to open a new ticket
 	Open(session Session, topic *Topic, body string, assignee *User, logHTTP HTTPLogCallback) (*Ticket, error)
+}
+
+type ExternalServiceService interface {
+	Call(sesion Session, body string, logHTTP HTTPLogCallback) (*ExternalServiceCall, error)
 }
 
 // AirtimeTransferStatus is a status of a airtime transfer

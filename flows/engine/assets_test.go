@@ -106,6 +106,10 @@ func (s *testSource) Classifiers() ([]assets.Classifier, error) {
 	return nil, s.err("classifiers")
 }
 
+func (s *testSource) ExternalServices() ([]assets.ExternalService, error) {
+	return nil, s.err("externalServices")
+}
+
 func (s *testSource) Fields() ([]assets.Field, error) {
 	return nil, s.err("fields")
 }
