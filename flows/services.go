@@ -94,7 +94,7 @@ type TicketService interface {
 }
 
 type ExternalServiceService interface {
-	Call(sesion Session, params []assets.ExternalServiceParam, logHTTP HTTPLogCallback) (*ExternalServiceCall, error)
+	Call(sesion Session, callAction assets.ExternalServiceCallAction, params []assets.ExternalServiceParam, logHTTP HTTPLogCallback) (*ExternalServiceCall, error)
 }
 
 // AirtimeTransferStatus is a status of a airtime transfer

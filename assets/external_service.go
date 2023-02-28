@@ -30,6 +30,11 @@ type ExternalServiceReference struct {
 	Name string              `json:"name"`
 }
 
+type ExternalServiceCallAction struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 type ExternalServiceParam struct {
 	Data struct {
 		Value string `json:"value,omitempty"`

@@ -33,14 +33,16 @@ type CallExternalServiceAction struct {
 	onlineAction
 
 	ExternalService *assets.ExternalServiceReference `json:"external_service,omitempty"`
+	CallAction      assets.ExternalServiceCallAction `json:"call"`
 	Params          []assets.ExternalServiceParam    `json:"params,omitempty"`
 	ResultName      string                           `json:"result_name,omitempty"`
 }
 
-func NewCallExternalService(uuid flows.ActionUUID, externalService *assets.ExternalServiceReference, params []assets.ExternalServiceParam, resultName string) *CallExternalServiceAction {
+func NewCallExternalService(uuid flows.ActionUUID, externalService *assets.ExternalServiceReference, callAction assets.ExternalServiceCallAction, params []assets.ExternalServiceParam, resultName string) *CallExternalServiceAction {
 	return &CallExternalServiceAction{
 		baseAction:      newBaseAction(TypeCallExternalService, uuid),
 		ExternalService: externalService,
+		CallAction:      callAction,
 		Params:          params,
 		ResultName:      resultName,
 	}
@@ -50,10 +52,10 @@ func (a *CallExternalServiceAction) Execute(run flows.FlowRun, step flows.Step, 
 	externalServices := run.Session().Assets().ExternalServices()
 	externalService := externalServices.Get(a.ExternalService.UUID)
 
-	return a.call(run, step, externalService, a.Params, logEvent)
+	return a.call(run, step, externalService, a.CallAction, a.Params, logEvent)
 }
 
-func (a *CallExternalServiceAction) call(run flows.FlowRun, step flows.Step, externalService *flows.ExternalService, params []assets.ExternalServiceParam, logEvent flows.EventCallback) error {
+func (a *CallExternalServiceAction) call(run flows.FlowRun, step flows.Step, externalService *flows.ExternalService, callAction assets.ExternalServiceCallAction, params []assets.ExternalServiceParam, logEvent flows.EventCallback) error {
 	if externalService == nil {
 		logEvent(events.NewDependencyError(a.ExternalService))
 		return nil
@@ -67,7 +69,7 @@ func (a *CallExternalServiceAction) call(run flows.FlowRun, step flows.Step, ext
 
 	httpLogger := &flows.HTTPLogger{}
 
-	call, err := svc.Call(run.Session(), params, httpLogger.Log)
+	call, err := svc.Call(run.Session(), callAction, params, httpLogger.Log)
 	if err != nil {
 		logEvent(events.NewError(err))
 	}
